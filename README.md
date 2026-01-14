@@ -1,15 +1,20 @@
-# Markdown Previewer
+# KirokuMD
 
-A modern markdown editor and previewer built with Next.js, featuring live preview, dark/light mode support, and export functionality.
+A minimal markdown editor for quiet documentation. Built with Next.js, featuring a split-view interface, dark and light themes, and export functionality.
+
+## Design Philosophy
+
+KirokuMD applies a quiet documentation aesthetic inspired by Japanese minimalism. The interface is designed to feel like writing in a notebook and viewing a clean archive, prioritizing minimal friction, sustained focus, and visual calm.
 
 ## Features
 
 - Split-view interface with editor and live preview
-- Dark and light mode theme support
-- Export to multiple formats (TXT, MD, PDF, DOCX)
-- Real-time markdown rendering
-- GitHub Flavored Markdown support
+- Focus mode for distraction-free writing
+- Dark and light theme support with smooth transitions
+- Export to TXT, MD, PDF, and DOCX formats
+- Toggleable document metadata panel
 - Character and word count statistics
+- Japanese labels for editor and preview panes
 
 ## Getting Started
 
@@ -44,10 +49,11 @@ npm start
 - Next.js with App Router
 - TypeScript
 - Tailwind CSS
-- React Markdown
+- React Markdown with remark-gfm
 - Lucide React Icons
 - jsPDF and html2canvas for PDF export
 - docx for Word document export
+- Inter, Noto Serif JP, and JetBrains Mono fonts
 
 ## Project Structure
 

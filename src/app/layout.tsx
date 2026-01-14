@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Markdown Previewer - Write and Export Markdown",
-  description: "A markdown previewer and exporter with live preview, dark/light mode, and export to TXT, PDF, MD, and DOCX formats.",
+  title: "KirokuMD - Quiet Documentation",
+  description: "A minimal markdown editor and previewer for focused writing and quiet documentation.",
 };
 
 export default function RootLayout({
@@ -25,6 +25,22 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  var theme = localStorage.getItem('theme');
+                  if (theme === 'dark' || (!theme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                    document.documentElement.classList.add('dark');
+                  }
+                } catch (e) {}
+              })();
+            `,
+          }}
+        />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >

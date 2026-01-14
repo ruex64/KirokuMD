@@ -1,166 +1,272 @@
 "use client";
 
-import { useState } from "react";
-import { FileText, PanelLeft, PanelRight } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Maximize2, Minimize2, Sun, Moon, Download, Info, X } from "lucide-react";
 import MarkdownEditor from "./MarkdownEditor";
 import MarkdownPreview from "./MarkdownPreview";
-import ExportMenu from "./ExportMenu";
-import ThemeToggle from "./ThemeToggle";
+import ExportModal from "./ExportModal";
+import { useTheme } from "@/context/ThemeContext";
 
-const DEFAULT_CONTENT = `# Welcome to Markdown Previewer
+const DEFAULT_CONTENT = ``;
 
-This is a **markdown previewer** with live preview and export functionality.
-
-## Features
-
-- Live preview as you type
-- Dark and light mode support
-- Export to multiple formats:
-  - Plain text (.txt)
-  - Markdown (.md)
-  - PDF (.pdf)
-  - Word document (.docx)
-
-## Markdown Examples
-
-### Text Formatting
-
-You can make text **bold**, *italic*, or ***both***.
-
-### Lists
-
-#### Unordered List
-- Item 1
-- Item 2
-- Item 3
-
-#### Ordered List
-1. First item
-2. Second item
-3. Third item
-
-### Code
-
-Inline \`code\` looks like this.
-
-\`\`\`javascript
-function greet(name) {
-  return \`Hello, \${name}!\`;
-}
-\`\`\`
-
-### Blockquote
-
-> This is a blockquote.
-> It can span multiple lines.
-
-### Table
-
-| Feature | Status |
-|---------|--------|
-| Editor | Done |
-| Preview | Done |
-| Export | Done |
-
-### Link
-
-[Visit GitHub](https://github.com)
-
----
-
-Start editing on the left panel to see the live preview here!
-`;
+const EMPTY_STATE_TEXT = "Begin writing your record.";
 
 export default function MarkdownApp() {
   const [content, setContent] = useState(DEFAULT_CONTENT);
-  const [showEditor, setShowEditor] = useState(true);
-  const [showPreview, setShowPreview] = useState(true);
+  const [focusMode, setFocusMode] = useState<"none" | "editor" | "preview">("none");
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [showMetadata, setShowMetadata] = useState(false);
+  const [isSaved, setIsSaved] = useState(true);
+  const [lastModified, setLastModified] = useState<Date>(new Date());
+  const { theme, toggleTheme } = useTheme();
 
-  const toggleEditor = () => {
-    if (showEditor && !showPreview) {
-      setShowPreview(true);
+  const [filename, setFilename] = useState("Untitled");
+  const [isEditingFilename, setIsEditingFilename] = useState(false);
+  const createdDate = useState<Date>(() => new Date())[0];
+
+  useEffect(() => {
+    if (content !== DEFAULT_CONTENT) {
+      setIsSaved(false);
+      setLastModified(new Date());
+      const timer = setTimeout(() => setIsSaved(true), 1500);
+      return () => clearTimeout(timer);
     }
-    setShowEditor(!showEditor);
+  }, [content]);
+
+  const toggleFocusMode = () => {
+    if (focusMode === "none") {
+      setFocusMode("editor");
+    } else if (focusMode === "editor") {
+      setFocusMode("preview");
+    } else {
+      setFocusMode("none");
+    }
   };
 
-  const togglePreview = () => {
-    if (showPreview && !showEditor) {
-      setShowEditor(true);
-    }
-    setShowPreview(!showPreview);
-  };
+  const showEditor = focusMode !== "preview";
+  const showPreview = focusMode !== "editor";
+
+  const wordCount = content.trim() ? content.trim().split(/\s+/).filter(Boolean).length : 0;
+  const charCount = content.length;
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50 dark:bg-gray-950">
-      {/* Header */}
-      <header className="flex items-center justify-between px-4 py-3 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
+    <div className="flex flex-col h-screen" style={{ background: "var(--bg-primary)" }}>
+      {/* Top Utility Bar */}
+      <header 
+        className="flex items-center justify-between px-4 h-10 border-b"
+        style={{ 
+          background: "var(--bg-primary)", 
+          borderColor: "var(--border-primary)" 
+        }}
+      >
         <div className="flex items-center gap-3">
-          <FileText className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-          <h1 className="text-xl font-semibold text-gray-900 dark:text-white">
-            Markdown Previewer
-          </h1>
+          {isEditingFilename ? (
+            <input
+              type="text"
+              value={filename}
+              onChange={(e) => setFilename(e.target.value)}
+              onBlur={() => setIsEditingFilename(false)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") setIsEditingFilename(false);
+                if (e.key === "Escape") setIsEditingFilename(false);
+              }}
+              autoFocus
+              className="text-sm font-medium bg-transparent border-b outline-none"
+              style={{ 
+                color: "var(--text-primary)",
+                borderColor: "var(--accent)"
+              }}
+            />
+          ) : (
+            <button
+              onClick={() => setIsEditingFilename(true)}
+              className="text-sm font-medium hover:opacity-70 transition-opacity"
+              style={{ color: "var(--text-secondary)" }}
+              title="Click to rename"
+            >
+              {filename}
+            </button>
+          )}
+          <span 
+            className="status-text"
+            style={{ color: isSaved ? "var(--text-ghost)" : "var(--accent)" }}
+          >
+            {isSaved ? "Saved" : "Editing..."}
+          </span>
         </div>
 
-        <div className="flex items-center gap-2">
-          {/* Panel Toggle Buttons */}
+        <div className="flex items-center gap-1">
+          {/* Metadata Toggle */}
           <button
-            onClick={toggleEditor}
-            className={`p-2 rounded-lg transition-colors ${
-              showEditor
-                ? "bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400"
-                : "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400"
-            }`}
-            title={showEditor ? "Hide Editor" : "Show Editor"}
+            onClick={() => setShowMetadata(!showMetadata)}
+            className="p-2 transition-opacity hover:opacity-70"
+            style={{ color: "var(--text-muted)" }}
+            title="Document Info"
           >
-            <PanelLeft className="w-5 h-5" />
-          </button>
-          <button
-            onClick={togglePreview}
-            className={`p-2 rounded-lg transition-colors ${
-              showPreview
-                ? "bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400"
-                : "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400"
-            }`}
-            title={showPreview ? "Hide Preview" : "Show Preview"}
-          >
-            <PanelRight className="w-5 h-5" />
+            <Info className="w-4 h-4" />
           </button>
 
-          <div className="w-px h-6 bg-gray-300 dark:bg-gray-700 mx-2" />
+          {/* Focus Mode Toggle */}
+          <button
+            onClick={toggleFocusMode}
+            className="p-2 transition-opacity hover:opacity-70"
+            style={{ color: "var(--text-muted)" }}
+            title={focusMode === "none" ? "Focus Mode" : "Exit Focus Mode"}
+          >
+            {focusMode === "none" ? (
+              <Maximize2 className="w-4 h-4" />
+            ) : (
+              <Minimize2 className="w-4 h-4" />
+            )}
+          </button>
 
-          <ThemeToggle />
+          {/* Theme Toggle */}
+          <button
+            onClick={toggleTheme}
+            className="p-2 transition-opacity hover:opacity-70"
+            style={{ color: "var(--text-muted)" }}
+            title={`Switch to ${theme === "light" ? "dark" : "light"} mode`}
+          >
+            {theme === "light" ? (
+              <Moon className="w-4 h-4" />
+            ) : (
+              <Sun className="w-4 h-4" />
+            )}
+          </button>
 
-          <div className="w-px h-6 bg-gray-300 dark:bg-gray-700 mx-2" />
-
-          <ExportMenu content={content} filename="markdown-document" />
+          {/* Export Button */}
+          <button
+            onClick={() => setShowExportModal(true)}
+            className="p-2 transition-opacity hover:opacity-70"
+            style={{ color: "var(--text-muted)" }}
+            title="Export Document"
+          >
+            <Download className="w-4 h-4" />
+          </button>
         </div>
       </header>
+
+      {/* Metadata Panel */}
+      {showMetadata && (
+        <div 
+          className="px-4 py-3 border-b"
+          style={{ 
+            background: "var(--bg-secondary)", 
+            borderColor: "var(--border-primary)" 
+          }}
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex gap-8">
+              <div>
+                <span className="pane-label block mb-1">TITLE</span>
+                <span className="text-sm" style={{ color: "var(--text-primary)" }}>
+                  {filename}
+                </span>
+              </div>
+              <div>
+                <span className="pane-label block mb-1">CREATED</span>
+                <span className="text-sm" style={{ color: "var(--text-secondary)" }}>
+                  {createdDate.toLocaleDateString("en-US", { 
+                    year: "numeric", 
+                    month: "short", 
+                    day: "numeric" 
+                  })}
+                </span>
+              </div>
+              <div>
+                <span className="pane-label block mb-1">MODIFIED</span>
+                <span className="text-sm" style={{ color: "var(--text-secondary)" }}>
+                  {lastModified.toLocaleDateString("en-US", { 
+                    year: "numeric", 
+                    month: "short", 
+                    day: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit"
+                  })}
+                </span>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowMetadata(false)}
+              className="p-1 transition-opacity hover:opacity-70"
+              style={{ color: "var(--text-ghost)" }}
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Main Content */}
       <main className="flex-1 flex overflow-hidden">
         {showEditor && (
           <div
-            className={`${
+            className={`focus-transition flex flex-col ${
               showPreview ? "w-1/2" : "w-full"
-            } border-r border-gray-200 dark:border-gray-800`}
+            } ${focusMode === "editor" ? "px-4" : ""}`}
+            style={{ background: "var(--bg-secondary)" }}
           >
-            <MarkdownEditor value={content} onChange={setContent} />
+            {/* Pane Label */}
+            <div className="px-4 pt-2 pb-1">
+              <span className="pane-label">
+                編集 <span style={{ opacity: 0.6 }}>Edit</span>
+              </span>
+            </div>
+            <MarkdownEditor 
+              value={content} 
+              onChange={setContent} 
+              placeholder={EMPTY_STATE_TEXT}
+            />
           </div>
         )}
 
+        {/* Vertical Divider */}
+        {showEditor && showPreview && (
+          <div className="vertical-divider" />
+        )}
+
         {showPreview && (
-          <div className={`${showEditor ? "w-1/2" : "w-full"}`}>
+          <div 
+            className={`focus-transition flex flex-col ${
+              showEditor ? "w-1/2" : "w-full"
+            } ${focusMode === "preview" ? "px-4" : ""}`}
+            style={{ background: "var(--bg-primary)" }}
+          >
+            {/* Pane Label */}
+            <div className="px-4 pt-2 pb-1">
+              <span className="pane-label">
+                表示 <span style={{ opacity: 0.6 }}>Preview</span>
+              </span>
+            </div>
             <MarkdownPreview content={content} />
           </div>
         )}
       </main>
 
-      {/* Footer */}
-      <footer className="px-4 py-2 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 text-center text-xs text-gray-500 dark:text-gray-400">
-        <span>
-          {content.length} characters | {content.split(/\s+/).filter(Boolean).length} words
+      {/* Status Bar */}
+      <footer 
+        className="px-4 py-1.5 flex items-center justify-end gap-4 border-t"
+        style={{ 
+          background: "var(--bg-primary)", 
+          borderColor: "var(--border-subtle)" 
+        }}
+      >
+        <span className="status-text">
+          {charCount} characters
+        </span>
+        <span className="status-text">
+          {wordCount} words
         </span>
       </footer>
+
+      {/* Export Modal */}
+      {showExportModal && (
+        <ExportModal
+          content={content}
+          filename={filename}
+          onClose={() => setShowExportModal(false)}
+        />
+      )}
     </div>
   );
 }
