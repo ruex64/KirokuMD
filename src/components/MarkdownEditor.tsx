@@ -4,12 +4,14 @@ interface MarkdownEditorProps {
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
+  readOnly?: boolean;
 }
 
 export default function MarkdownEditor({ 
   value, 
   onChange, 
-  placeholder = "Begin writing your record." 
+  placeholder = "Begin writing your record.",
+  readOnly = false,
 }: MarkdownEditorProps) {
   return (
     <div className="flex flex-col flex-1 overflow-hidden">
@@ -21,8 +23,10 @@ export default function MarkdownEditor({
         style={{
           background: "var(--bg-secondary)",
           color: "var(--text-primary)",
+          cursor: readOnly ? "default" : "text",
         }}
         spellCheck={false}
+        readOnly={readOnly}
       />
     </div>
   );
