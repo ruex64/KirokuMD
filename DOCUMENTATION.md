@@ -693,25 +693,30 @@ service cloud.firestore {
   match /databases/{database}/documents {
     // Helper function to check if user is approved
     function isApproved() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status == 'approved';
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid))
+             && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status == 'approved';
     }
     
     // Helper function to check if user is admin
     function isAdmin() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' 
-             && isApproved();
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid))
+             && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' 
+             && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status == 'approved';
     }
 
     // Users collection
     match /users/{userId} {
-      // Users can read their own data
+      // Users can read their own data (even if pending)
       allow read: if request.auth != null && request.auth.uid == userId;
+      
       // Users can create their own profile (first time setup)
       allow create: if request.auth != null && request.auth.uid == userId;
-      // Only admins can update user data (for approval/role changes)
-      allow update: if request.auth != null && isAdmin();
+      
       // Admins can read all users
       allow read: if request.auth != null && isAdmin();
+      
+      // Only admins can update any user data (for approval/role changes)
+      allow update: if request.auth != null && isAdmin();
     }
 
     // Documents collection
